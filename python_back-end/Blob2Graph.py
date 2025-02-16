@@ -19,7 +19,8 @@ with open('c://Users//Basil//Desktop//Uni//Year_4//Hackathon//ecocityology//expo
     blobData = json.load(f)
     
 #example border Array:
-borderArray = np.array(blobData["cityShapes"][0]["outerPolygon"])
+borderArray = np.array(blobData["cityShapes"][1]["outerPolygon"])
+polygon = Polygon(borderArray)
 #target grid pitch
 L = 10
 # %%
@@ -87,8 +88,6 @@ def Blob2Graph(borderArray, L):
             
             minY =idxEdge[0][0]
             maxY = idxEdge[0][-1]
-            plt.scatter(inside_points[minY, 0], inside_points[minY, 1], s=20, color='green')
-            plt.scatter(inside_points[maxY, 0], inside_points[maxY, 1], s=20, color='green')
             # #add edges to adjacency matrix
             row1 = row.copy()
             row1[minY] = 1
@@ -166,11 +165,12 @@ def Blob2Graph(borderArray, L):
 
     return all_nodes, adj_matrix
 
+
 #%% Plot results
 plt.figure(figsize=(6,6))
 plt.plot(*polygon.exterior.xy, 'k-', label='Polygon Boundary')
-plt.scatter(inside_points[:, 0], inside_points[:, 1], s=5, color='red', label='Grid Points')
-plt.scatter(intersection_nodes[:, 0], intersection_nodes[:, 1], s=20, color='blue', label='Intersection Nodes')
+#plt.scatter(inside_points[:, 0], inside_points[:, 1], s=5, color='red', label='Grid Points')
+#plt.scatter(intersection_nodes[:, 0], intersection_nodes[:, 1], s=20, color='blue', label='Intersection Nodes')
 # add edges
 for i in range(adj_matrix.shape[0]):
     for j in range(i, adj_matrix.shape[1]):
