@@ -18,6 +18,8 @@ const DIVISION_FACTOR = 0.15;
 const OBSTACLE_CRITICAL_AREA = 20;
 const DEFAULT_MAX_SHAPE_AREA = 8000; // Define a sensible default
 
+const MAX_SHAPE_SCALE = 10
+
 // Helper functions for geometry
 const calculateSignedArea = (points) => {
   let area = 0;
@@ -311,7 +313,7 @@ function PolygonDrawer({
   const [currentShapeIndex, setCurrentShapeIndex] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  console.log("cityshapes" + JSON.stringify(cityShapes))
+  // console.log("cityshapes" + JSON.stringify(cityShapes))
   // New state for user inputs
   const [selectedColor, setSelectedColor] = useState("#ff0000");
   const [selectedGrowthRate, setSelectedGrowthRate] =
@@ -561,9 +563,9 @@ function PolygonDrawer({
           const coords = obj.outerPolygon;
           const n = coords.length;
           const currentArea = calculateArea(coords);
-          if (currentArea >= obj.maxShapeArea) {
-            console.log("max area " + obj.maxShapeArea)
-            console.log("currentArea" + obj.currentArea)
+          if (currentArea >= (obj.maxShapeArea*MAX_SHAPE_SCALE)) {
+            console.log("max area " + (obj.maxShapeArea*100))
+            console.log("currentArea " + currentArea)
             return obj;
           }
 
@@ -695,7 +697,7 @@ function PolygonDrawer({
           }
 
           const newArea = calculateArea(updatedObject.outerPolygon);
-          if (newArea > updatedObject.maxShapeArea) {
+          if (newArea > updatedObject.maxShapeArea * MAX_SHAPE_SCALE) {
             return obj;
           }
 
