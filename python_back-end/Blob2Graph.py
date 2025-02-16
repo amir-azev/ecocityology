@@ -6,7 +6,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from shapely.geometry import Point, Polygon, LineString
-from scipy.sparse import lil_matrix
+from scipy.sparse import dok_matrix
 import json
 import networkx as nx
 
@@ -32,111 +32,151 @@ def getGraph(borderArray):
     # make wider grid
     
 #%%
+def Blob2Graph(borderArray, L):
 
+    polygon = Polygon(borderArray)
 
-polygon = Polygon(borderArray)
+    # Generate grid
+    x_min, y_min, x_max, y_max = polygon.bounds
+    nCols  = np.round((x_max - x_min)/L).astype(int) 
+    nRows = np.round((y_max - y_min)/L).astype(int)
+    x_values = np.linspace(x_min, x_max, nCols)  # Grid resolution
+    y_values = np.linspace(y_min, y_max, nRows)
+    xx, yy = np.meshgrid(x_values, y_values)
+    grid_points = np.vstack([xx.ravel(), yy.ravel()]).T
 
-# Generate grid
-x_min, y_min, x_max, y_max = polygon.bounds
-nCols  = np.round((x_max - x_min)/L).astype(int) 
-nRows = np.round((y_max - y_min)/L).astype(int)
-x_values = np.linspace(x_min, x_max, nCols)  # Grid resolution
-y_values = np.linspace(y_min, y_max, nRows)
-xx, yy = np.meshgrid(x_values, y_values)
-grid_points = np.vstack([xx.ravel(), yy.ravel()]).T
+    num_nodes = nRows * nCols
 
-num_nodes = nRows * nCols
+    # Create sparse adjacency matrix
+    adj_matrix = np.zeros((num_nodes, num_nodes), dtype=int)
 
-# Create sparse adjacency matrix
-adj_matrix = lil_matrix((num_nodes, num_nodes), dtype=int)
+    for i in range(nRows):
+        for j in range(nCols):
+            index = i * nCols + j  # Convert 2D index to 1D
 
-for i in range(nRows):
-    for j in range(nCols):
-        index = i * nCols + j  # Convert 2D index to 1D
+            # Right neighbor
+            if j + 1 < nCols:
+                adj_matrix[index, index + 1] = 1
+                adj_matrix[index + 1, index] = 1  # Ensure symmetry
 
-        # Right neighbor
-        if j + 1 < nCols:
-            adj_matrix[index, index + 1] = 1
-            adj_matrix[index + 1, index] = 1  # Ensure symmetry
+            # Bottom neighbor
+            if i + 1 < nRows:
+                adj_matrix[index, index + nCols] = 1
+                adj_matrix[index + nCols, index] = 1  # Ensure symmetry
+    # Filter points inside the polygon
+    isInside = np.array([polygon.contains(Point(p)) for p in grid_points])
+    inside_points = grid_points[isInside]
+    #remove rows and columns from adjacency matrix according to points outside polygon
+    adj_matrix = adj_matrix[isInside]
+    adj_matrix = adj_matrix[:,isInside]
+    # Add intersection nodes at the polygon boundary
+    intersection_nodes = []
+    additional_edges = []
+    row = np.zeros(adj_matrix.shape[0])
+    for x in x_values:
+        line = LineString([(x, y_min), (x, y_max)])
+        intersections = polygon.intersection(line)
 
-        # Bottom neighbor
-        if i + 1 < nRows:
-            adj_matrix[index, index + nCols] = 1
-            adj_matrix[index + nCols, index] = 1  # Ensure symmetry
-
-#%%
-# Filter points inside the polygon
-inside_points = np.array([p for p in grid_points if polygon.contains(Point(p))])
-
-# Add intersection nodes at the polygon boundary
-intersection_nodes = []
-for x in x_values:
-    line = LineString([(x, y_min), (x, y_max)])
-    intersections = polygon.intersection(line)
-    if intersections.geom_type == 'LineString':
-        (x0,y0,x1,y1) = intersections.bounds
-        intersection_nodes.append((x0, y0))
-        intersection_nodes.append((x1, y1))
-        print(y0,y1)
-
-    elif intersections.geom_type == 'MultiLineString':
-        for line in intersections.geoms:
-            (x0,y0,x1,y1) = line.bounds
+        if intersections.geom_type == 'LineString':
+            (x0,y0,x1,y1) = intersections.bounds
             intersection_nodes.append((x0, y0))
             intersection_nodes.append((x1, y1))
+            # find inside edge indices
+            insideX = np.all(np.array([inside_points[:,1] > y0, inside_points[:,1] < y1, inside_points[:, 0] == x]), axis=0)
+            idxEdge = np.where(insideX)
+            
+            minY =idxEdge[0][0]
+            maxY = idxEdge[0][-1]
+            plt.scatter(inside_points[minY, 0], inside_points[minY, 1], s=20, color='green')
+            plt.scatter(inside_points[maxY, 0], inside_points[maxY, 1], s=20, color='green')
+            # #add edges to adjacency matrix
+            row1 = row.copy()
+            row1[minY] = 1
+            additional_edges.append(row1)
+            row2 = row.copy()
+            row2[maxY] = 1
+            additional_edges.append(row2)
 
-    elif intersections.geom_type == 'MultiPoint':
-        for pt in intersections:
-            intersection_nodes.append((pt.x, pt.y))
-    elif intersections.geom_type == 'Point':
-        intersection_nodes.append((intersections.x, intersections.y))
 
-for y in y_values:
-    line = LineString([(x_min, y), (x_max, y)])
-    intersections = polygon.intersection(line)
-    
-    if intersections.geom_type == 'LineString':
-        (x0,y0,x1,y1) = intersections.bounds
-        intersection_nodes.append((x0, y0))
-        intersection_nodes.append((x1, y1))
 
-    elif intersections.geom_type == 'MultiLineString':
-        for line in intersections.geoms:
-            (x0,y0,x1,y1) = line.bounds
+        elif intersections.geom_type == 'MultiLineString':
+            for line in intersections.geoms:
+                (x0,y0,x1,y1) = line.bounds
+                intersection_nodes.append((x0, y0))
+                intersection_nodes.append((x1, y1))
+                insideX = np.all(np.array([inside_points[:,1] > y0, inside_points[:,1] < y1, inside_points[:, 0] == x]), axis=0)
+                idxEdge = np.where(insideX)
+                
+                minY =idxEdge[0][0]
+                maxY = idxEdge[0][-1]
+                # #add edges to adjacency matrix
+                row1 = row.copy()
+                row1[minY] = 1
+                additional_edges.append(row1)
+                row2 = row.copy()
+                row2[maxY] = 1
+                additional_edges.append(row2)
+
+                
+
+    for y in y_values:
+        line = LineString([(x_min, y), (x_max, y)])
+        intersections = polygon.intersection(line)
+        
+        if intersections.geom_type == 'LineString':
+            (x0,y0,x1,y1) = intersections.bounds
             intersection_nodes.append((x0, y0))
             intersection_nodes.append((x1, y1))
+            # find inside edge indices
+            insideY = np.all(np.array([inside_points[:,0] > x0, inside_points[:,0] < x1, inside_points[:, 1] == y]), axis=0)
+            idxEdge = np.where(insideY)
+            minX =idxEdge[0][0]
+            maxX = idxEdge[0][-1]
+            # #add edges to adjacency matrix
+            row1 = row.copy()
+            row1[minX] = 1
+            additional_edges.append(row1)
+            row2 = row.copy()
+            row2[maxX] = 1
+            additional_edges.append(row2)
+        elif intersections.geom_type == 'MultiLineString':
+            for line in intersections.geoms:
+                (x0,y0,x1,y1) = intersections.bounds
+                intersection_nodes.append((x0, y0))
+                intersection_nodes.append((x1, y1))
+                # find inside edge indices
+                insideY = np.all(np.array([inside_points[:,0] > x0, inside_points[:,0] < x1, inside_points[:, 1] == y]), axis=0)
+                idxEdge = np.where(insideY)
+                minX =idxEdge[0][0]
+                maxX = idxEdge[0][-1]
+                # #add edges to adjacency matrix
+                row1 = row.copy()
+                row1[minX] = 1
+                additional_edges.append(row1)
+                row2 = row.copy()
+                row2[maxX] = 1
+                additional_edges.append(row2)
 
-    elif intersections.geom_type == 'MultiPoint':
-        for pt in intersections:
-            intersection_nodes.append((pt.x, pt.y))
-    elif intersections.geom_type == 'Point':
-        intersection_nodes.append((intersections.x, intersections.y))
 
+    intersection_nodes = np.array(intersection_nodes)
+    all_nodes = np.vstack([inside_points, intersection_nodes])  # Combine valid grid points and intersections
+    # combine adjacency matrix with additional edges
+    addMat = np.vstack(additional_edges)
+    adj_matrix = np.hstack([np.vstack([adj_matrix, addMat]), np.vstack([addMat.T, np.zeros((addMat.shape[0], addMat.shape[0]))])])
 
+    return all_nodes, adj_matrix
 
-intersection_nodes = np.array(intersection_nodes)
-all_nodes = np.vstack([inside_points, intersection_nodes])  # Combine valid grid points and intersections
-
-#%% Create adjacency matrix
-num_nodes = len(all_nodes)
-adj_matrix = lil_matrix((num_nodes, num_nodes), dtype=int)
-
-# Helper function to find neighbors
-from scipy.spatial import KDTree
-tree = KDTree(all_nodes)
-neighbor_radius = np.min(np.diff(x_values)) * 1.1  # Slightly more than grid spacing
-
-for i, point in enumerate(all_nodes):
-    indices = tree.query_ball_point(point, neighbor_radius)
-    for j in indices:
-        if i != j:
-            adj_matrix[i, j] = 1
-
-# Plot results
+#%% Plot results
 plt.figure(figsize=(6,6))
 plt.plot(*polygon.exterior.xy, 'k-', label='Polygon Boundary')
 plt.scatter(inside_points[:, 0], inside_points[:, 1], s=5, color='red', label='Grid Points')
 plt.scatter(intersection_nodes[:, 0], intersection_nodes[:, 1], s=20, color='blue', label='Intersection Nodes')
+# add edges
+for i in range(adj_matrix.shape[0]):
+    for j in range(i, adj_matrix.shape[1]):
+        if adj_matrix[i,j] == 1:
+            plt.plot([all_nodes[i,0], all_nodes[j,0]], [all_nodes[i,1], all_nodes[j,1]], 'g-')
+
 plt.legend()
 plt.show()
 
