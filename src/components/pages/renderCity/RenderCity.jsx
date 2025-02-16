@@ -1,81 +1,68 @@
-import React, { useState } from "react";
-import { Slider } from "@/components/ui/slider"
+import React, { useRef, useEffect } from "react";
 
-const GridLayout = ({ boxWidth = 400, boxHeight = 400 }) => {
-  const [gridDensity, setGridDensity] = useState(10);
-  const [gridAngle, setGridAngle] = useState(0);
+const GridLayout = ({
+  regionWater,
+  fullRegionImage,
+  boxWidth = 600, // Default width if not provided
+  boxHeight = 400, // Default height if not provided
+}) => {
+  const canvasRef = useRef(null);
+  useEffect(() => {
+    if (!fullRegionImage || !canvasRef.current) return;
 
-  const generateGrid = () => {
-    const lines = [];
-    const spacing = boxWidth / gridDensity;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
 
-    for (let i = 0; i <= gridDensity; i++) {
-      const offset = i * spacing;
+    // Create an image object to draw the full region image on the canvas
+    const img = new Image();
+    img.src = fullRegionImage;
+    img.onload = () => {
+      // Draw the full region image
+      ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+      ctx.drawImage(img, 0, 0, boxWidth, boxHeight);
 
-      lines.push(
-        <line
-          key={`v-${i}`}
-          x1={offset}
-          y1={0}
-          x2={offset}
-          y2={boxHeight}
-          stroke="black"
-        />
-      );
+      // Render water polygons on top of the image
+      if (regionWater) {
+        regionWater.forEach((water) => {
+          // Begin a new path for each water polygon
+          ctx.beginPath();
+          const path = new Path2D(water.d); // Assuming water.d is the path data
+          ctx.fillStyle = "rgba(0, 0, 255, 0.4)"; // Semi-transparent blue
+          ctx.fill(path); // Fill the path with blue color
+        });
+      }
+    };
+  }, [fullRegionImage, regionWater, boxWidth, boxHeight]);
 
-      lines.push(
-        <line
-          key={`h-${i}`}
-          x1={0}
-          y1={offset}
-          x2={boxWidth}
-          y2={offset}
-          stroke="black"
-        />
-      );
-    }
-
-    return lines;
+  // Access the canvas via the ref and return its image data or manipulate it
+  const getRenderedImageData = () => {
+    const canvas = canvasRef.current;
+    return canvas ? canvas.toDataURL() : null; // Return image data in base64 format
   };
 
   return (
-    <div className="flex flex-col items-center gap-4">
-      <div className="w-full flex flex-col gap-2">
-        <label className="font-medium">Grid Density: {gridDensity}</label>
-        <Slider
-          value={[gridDensity]}
-          onValueChange={(value) => setGridDensity(value[0])}
-          min={5}
-          max={50}
-          step={1}
-        />
-      </div>
-
-      <div className="w-full flex flex-col gap-2">
-        <label className="font-medium">Grid Angle: {gridAngle}°</label>
-        <Slider
-          value={[gridAngle]}
-          onValueChange={(value) => setGridAngle(value[0])}
-          min={-45}
-          max={45}
-          step={1}
-        />
-      </div>
-
-      <div
-        className="relative border border-gray-300"
-        style={{ width: boxWidth, height: boxHeight }}
-      >
-        <svg
-          width={boxWidth}
-          height={boxHeight}
-          style={{
-            transform: `rotate(${gridAngle}deg)`,
-          }}
-        >
-          {generateGrid()}
-        </svg>
-      </div>
+    <div
+      className="relative border border-gray-300"
+      style={{
+        width: `${boxWidth}px`,
+        height: `${boxHeight}px`,
+        overflow: "hidden",
+        backgroundColor: "#eee",
+        position: "relative",
+      }}
+    >
+      {/* Canvas where the image and polygons are rendered */}
+      <canvas
+        ref={canvasRef}
+        width={boxWidth}
+        height={boxHeight}
+        style={{ display: "block" }}
+      />
+      
+      {/* Optional: Button to log or use rendered image data */}
+      <button onClick={() => console.log(getRenderedImageData())}>
+        Log Rendered Image Data
+      </button>
     </div>
   );
 };

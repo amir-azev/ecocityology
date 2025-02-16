@@ -215,7 +215,14 @@ const links = [
           />
         </TabsContent>
         <TabsContent value="Render" className="p-4">
-        <RenderCity />
+        <RenderCity 
+regionElevationMatrix={regionElevationMatrix}
+setRegionElevationMatrix={setRegionElevationMatrix}
+regionMatrixWidth={regionMatrixWidth}
+fullRegionImage={fullRegionImage}
+regionWater={regionWater}
+
+        />
         </TabsContent>
       </Tabs>
     </div>

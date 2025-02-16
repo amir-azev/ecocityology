@@ -40,6 +40,8 @@
     "react-svg-pan-zoom": "^3.13.1",
     "tailwind-merge": "^2.5.3",
     "tailwindcss-animate": "^1.0.7",
+    "three": "^0.173.0",
+    "three-orbitcontrols": "^2.110.2",
     "topojson": "^3.0.2"
   },
   "devDependencies": {

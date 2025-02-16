@@ -291,6 +291,7 @@ function RegionPlotter({
     console.log(newShapes);
   };
 
+  console.log(fullRegionImage)
   /**
    * Render the terrain map and water polygons using the merged image
    */
