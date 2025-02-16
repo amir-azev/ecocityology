@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 from shapely.geometry import Point, Polygon, LineString
 from scipy.sparse import lil_matrix
 import json
+import networkx as nx
+
 #%% example region definition (circle)
 theta = np.linspace(0, 2*np.pi -0.1, 100)
 r = 1
@@ -43,7 +45,26 @@ y_values = np.linspace(y_min, y_max, nRows)
 xx, yy = np.meshgrid(x_values, y_values)
 grid_points = np.vstack([xx.ravel(), yy.ravel()]).T
 
+num_nodes = nRows * nCols
 
+# Create sparse adjacency matrix
+adj_matrix = lil_matrix((num_nodes, num_nodes), dtype=int)
+
+for i in range(nRows):
+    for j in range(nCols):
+        index = i * nCols + j  # Convert 2D index to 1D
+
+        # Right neighbor
+        if j + 1 < nCols:
+            adj_matrix[index, index + 1] = 1
+            adj_matrix[index + 1, index] = 1  # Ensure symmetry
+
+        # Bottom neighbor
+        if i + 1 < nRows:
+            adj_matrix[index, index + nCols] = 1
+            adj_matrix[index + nCols, index] = 1  # Ensure symmetry
+
+#%%
 # Filter points inside the polygon
 inside_points = np.array([p for p in grid_points if polygon.contains(Point(p))])
 
@@ -56,6 +77,7 @@ for x in x_values:
         (x0,y0,x1,y1) = intersections.bounds
         intersection_nodes.append((x0, y0))
         intersection_nodes.append((x1, y1))
+        print(y0,y1)
 
     elif intersections.geom_type == 'MultiLineString':
         for line in intersections.geoms:
