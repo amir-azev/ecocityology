@@ -11,18 +11,19 @@ import json
 import networkx as nx
 
 #%% example region definition (circle)
-theta = np.linspace(0, 2*np.pi -0.1, 100)
-r = 1
-borderArray = np.array([r*np.cos(theta), r*np.sin(theta)]).T
-#%% import blob data
-with open('c://Users//Basil//Desktop//Uni//Year_4//Hackathon//ecocityology//exportData(3).txt', "r") as f:
-    blobData = json.load(f)
-    
-#example border Array:
-borderArray = np.array(blobData["cityShapes"][1]["outerPolygon"])
-polygon = Polygon(borderArray)
-#target grid pitch
-L = 10
+if __name__ == '__main__':
+    theta = np.linspace(0, 2*np.pi -0.1, 100)
+    r = 1
+    borderArray = np.array([r*np.cos(theta), r*np.sin(theta)]).T
+    #  import blob data
+    with open('c://Users//Basil//Desktop//Uni//Year_4//Hackathon//ecocityology//exportData(3).txt', "r") as f:
+        blobData = json.load(f)
+        
+    #example border Array:
+    borderArray = np.array(blobData["cityShapes"][1]["outerPolygon"])
+    polygon = Polygon(borderArray)
+    #target grid pitch
+    L = 10
 # %%
 def getGraph(borderArray):
     # find smallest and largest x and y values
@@ -167,18 +168,19 @@ def Blob2Graph(borderArray, L):
 
 
 #%% Plot results
-plt.figure(figsize=(6,6))
-plt.plot(*polygon.exterior.xy, 'k-', label='Polygon Boundary')
-#plt.scatter(inside_points[:, 0], inside_points[:, 1], s=5, color='red', label='Grid Points')
-#plt.scatter(intersection_nodes[:, 0], intersection_nodes[:, 1], s=20, color='blue', label='Intersection Nodes')
-# add edges
-for i in range(adj_matrix.shape[0]):
-    for j in range(i, adj_matrix.shape[1]):
-        if adj_matrix[i,j] == 1:
-            plt.plot([all_nodes[i,0], all_nodes[j,0]], [all_nodes[i,1], all_nodes[j,1]], 'g-')
+if __name__ == '__main__':
+    plt.figure(figsize=(6,6))
+    plt.plot(*polygon.exterior.xy, 'k-', label='Polygon Boundary')
+    #plt.scatter(inside_points[:, 0], inside_points[:, 1], s=5, color='red', label='Grid Points')
+    #plt.scatter(intersection_nodes[:, 0], intersection_nodes[:, 1], s=20, color='blue', label='Intersection Nodes')
+    # add edges
+    for i in range(adj_matrix.shape[0]):
+        for j in range(i, adj_matrix.shape[1]):
+            if adj_matrix[i,j] == 1:
+                plt.plot([all_nodes[i,0], all_nodes[j,0]], [all_nodes[i,1], all_nodes[j,1]], 'g-')
 
-plt.legend()
-plt.show()
+    plt.legend()
+    plt.show()
 
 
 
