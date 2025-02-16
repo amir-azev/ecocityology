@@ -2,14 +2,19 @@ import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Child components
-import TopographicMap from "./components/pages/regionPlotter/TopographicMap";
-import RegionPlotter from "./components/pages/regionPlotter/RegionPlotter";
-import CellGrowthSimulator from "./components/pages/regionPlotter/CellGrowth";
+import TopographicMap from "./components/pages/cityGenerator/TopographicMap";
+import CityGenerator from "./components/pages/cityGenerator/CityGenerator";
+import CellGrowthSimulator from "./components/pages/cityGenerator/CellGrowth";
 import { Grid } from "lucide-react";
-import GridLayout from "./components/pages/regionPlotter/GridLayout";
+import GridLayout from "./components/pages/cityGenerator/GridLayout";
 import RenderCity from "./components/pages/renderCity/RenderCity"
+import {generateCityGraph} from "./components/graphGenerator"
 
 export default function App() {
+
+
+  const city_area = 5000;
+  const { nodes, links } = generateCityGraph(city_area);
   /**
    * 1) State for the topographic map
    */
@@ -25,7 +30,7 @@ export default function App() {
   const [fullRegionImage, setFullRegionImage] = useState(null);
 
   // [ADDED] Store the stitched elevation matrix for the entire region
-  const [regionElevationMatrix, setRegionElevationMatrix] = useState(null);
+  const [regionElevationArray, setregionElevationArray] = useState(null);
   const [regionMatrixWidth, setRegionMatrixWidth] = useState(0);
   const [regionMatrixHeight, setRegionMatrixHeight] = useState(0);
 
@@ -40,7 +45,7 @@ export default function App() {
    */
   // Example: store dynamic node/link data
 
-const nodes = [
+const nodesOld = [
   {
     id: "Residential",
     growthRate: 1.6,
@@ -94,7 +99,7 @@ const nodes = [
 
 
 
-const links = [
+const linksOld = [
   // Existing Links
   { source: "Residential", target: "Town Centre", weight: 5 },
   { source: "Residential", target: "Market", weight: 3 },
@@ -120,6 +125,13 @@ const links = [
 
 
 
+const data = [
+  [0, 1, 2, 1, 0],
+  [1, 2, 3, 2, 1],
+  [2, 3, 4, 3, 2],
+  [1, 2, 3, 2, 1],
+  [0, 1, 2, 1, 0],
+];
 
   const [plotterNodes, setPlotterNodes] = useState(nodes);
   const [plotterLinks, setPlotterLinks] = useState(links);
@@ -149,6 +161,13 @@ const links = [
             2. Grow City
           </TabsTrigger>
 
+          <TabsTrigger
+            value="CellGrowthSimulator"
+            className="w-full text-center py-2"
+          >
+            3. Cell Grow
+          </TabsTrigger>
+
           <TabsTrigger value="Render" className="w-full text-center py-2">
             4. 3D Render
           </TabsTrigger>
@@ -167,8 +186,8 @@ const links = [
             setRegionTiles={setRegionTiles}
             regionWater={regionWater}
             setRegionWater={setRegionWater}
-            regionElevationMatrix={regionElevationMatrix}
-            setRegionElevationMatrix={setRegionElevationMatrix}
+            regionElevationArray={regionElevationArray}
+            setregionElevationArray={setregionElevationArray}
             regionMatrixWidth={regionMatrixWidth}
             setRegionMatrixWidth={setRegionMatrixWidth}
             regionMatrixHeight={regionMatrixHeight}
@@ -181,7 +200,7 @@ const links = [
 
         {/* TAB 2: Region Plotter */}
         <TabsContent value="CityGrow" className="p-4  h-full w-full">
-          <RegionPlotter
+          <CityGenerator
             // Example of passing the node/link data if you want them in parent state
             plotterNodes={plotterNodes}
             setPlotterNodes={setPlotterNodes}
@@ -193,6 +212,7 @@ const links = [
             // If you want the user to place nodes within the circle:
             selectedLngLat={selectedLngLat}
             radiusKm={radiusKm}
+            regionElevationArray={regionElevationArray}
             setCityShapes={setCityShapes}
             regionMatrixWidth={regionMatrixWidth}
             regionMatrixHeight={regionMatrixHeight}
@@ -206,7 +226,7 @@ const links = [
             setCityShapes={setCityShapes}
             regionWater={regionWater}
             fullRegionImage={fullRegionImage}
-            regionElevationMatrix={regionElevationMatrix}
+            regionElevationArray={regionElevationArray}
             regionMatrixWidth={regionMatrixWidth}
             regionMatrixHeight={regionMatrixHeight}
             regionWaterPaths={regionWaterPaths}
@@ -215,7 +235,15 @@ const links = [
           />
         </TabsContent>
         <TabsContent value="Render" className="p-4">
-        <RenderCity />
+        <RenderCity
+        regionElevationArray={regionElevationArray}
+            regionMatrixWidth={regionMatrixWidth}
+            regionMatrixHeight={regionMatrixHeight}
+            elevationScale={0.05} 
+
+            data={data}
+            elevationMatrix={data}
+            />
         </TabsContent>
       </Tabs>
     </div>
