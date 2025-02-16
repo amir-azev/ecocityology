@@ -8,8 +8,13 @@ import CellGrowthSimulator from "./components/pages/regionPlotter/CellGrowth";
 import { Grid } from "lucide-react";
 import GridLayout from "./components/pages/regionPlotter/GridLayout";
 import RenderCity from "./components/pages/renderCity/RenderCity"
+import {generateCityGraph} from "./components/graphGenerator"
 
 export default function App() {
+
+
+  const city_area = 5000;
+  const { nodes, links } = generateCityGraph(city_area);
   /**
    * 1) State for the topographic map
    */
@@ -40,7 +45,7 @@ export default function App() {
    */
   // Example: store dynamic node/link data
 
-const nodes = [
+const nodesOld = [
   {
     id: "Residential",
     growthRate: 1.6,
@@ -94,7 +99,7 @@ const nodes = [
 
 
 
-const links = [
+const linksOld = [
   // Existing Links
   { source: "Residential", target: "Town Centre", weight: 5 },
   { source: "Residential", target: "Market", weight: 3 },
@@ -117,8 +122,6 @@ const links = [
   { source: "Park B", target: "Residential", weight: 3 },
   { source: "Park B", target: "Commercial", weight: 2 },
 ];
-
-
 
 
   const [plotterNodes, setPlotterNodes] = useState(nodes);
