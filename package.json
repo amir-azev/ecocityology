@@ -1,5 +1,5 @@
 {
-  "name": "city-planner",
+  "name": "ecocityology",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -40,6 +40,7 @@
     "react-svg-pan-zoom": "^3.13.1",
     "tailwind-merge": "^2.5.3",
     "tailwindcss-animate": "^1.0.7",
+    "three": "^0.173.0",
     "topojson": "^3.0.2"
   },
   "devDependencies": {
