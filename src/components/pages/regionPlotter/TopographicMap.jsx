@@ -235,7 +235,7 @@ function TopographicMap({
       const offsetY = (tile.y - minTileY) * 256;
       ctx.drawImage(img, offsetX, offsetY, 256, 256);
     });
-
+    localStorage.setItem('stitchedImage', loadedImages);
     // Convert the canvas to a data URL
     return canvas.toDataURL("image/png");
   };

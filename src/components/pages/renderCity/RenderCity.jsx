@@ -1,44 +1,72 @@
 import React, { useRef, useEffect } from "react";
+import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import { TerrainCutout } from "../../../api/TerrainCutout";
 
-const GridLayout = ({
+const RenderCity = ({
   regionWater,
   fullRegionImage,
   boxWidth = 600, // Default width if not provided
   boxHeight = 400, // Default height if not provided
 }) => {
-  const canvasRef = useRef(null);
+  const mountRef = useRef(null);
+
   useEffect(() => {
-    if (!fullRegionImage || !canvasRef.current) return;
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(
+      60,
+      boxWidth / boxHeight,
+      1,
+      1000
+    );
+    camera.position.set(-8, 5, 8).setLength(25);
 
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(boxWidth, boxHeight);
+    renderer.setClearColor(0x7f7f7f);
+    mountRef.current.appendChild(renderer.domElement);
 
-    // Create an image object to draw the full region image on the canvas
-    const img = new Image();
-    img.src = fullRegionImage;
-    img.onload = () => {
-      // Draw the full region image
-      ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
-      ctx.drawImage(img, 0, 0, boxWidth, boxHeight);
+    const controls = new OrbitControls(camera, renderer.domElement);
 
-      // Render water polygons on top of the image
-      if (regionWater) {
-        regionWater.forEach((water) => {
-          // Begin a new path for each water polygon
-          ctx.beginPath();
-          const path = new Path2D(water.d); // Assuming water.d is the path data
-          ctx.fillStyle = "rgba(0, 0, 255, 0.4)"; // Semi-transparent blue
-          ctx.fill(path); // Fill the path with blue color
-        });
-      }
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.setScalar(10);
+    scene.add(light, new THREE.AmbientLight(0xffffff, 0.5));
+
+    // Load the image from localStorage
+    const base64String = localStorage.getItem('stitchedImage');
+    if (base64String) {
+      const textureLoader = new THREE.TextureLoader();
+      const heightMap = textureLoader.load(base64String);
+
+      const terrainCutout = new TerrainCutout(20, 2, 20, 200, 200, heightMap);
+      terrainCutout.material.displacementScale = 5;
+      scene.add(terrainCutout);
+    } else {
+      console.error('No image stored in localStorage');
+    }
+
+    const handleResize = () => {
+      camera.aspect = boxWidth / boxHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(boxWidth, boxHeight);
     };
-  }, [fullRegionImage, regionWater, boxWidth, boxHeight]);
 
-  // Access the canvas via the ref and return its image data or manipulate it
-  const getRenderedImageData = () => {
-    const canvas = canvasRef.current;
-    return canvas ? canvas.toDataURL() : null; // Return image data in base64 format
-  };
+    window.addEventListener("resize", handleResize);
+
+    const animate = () => {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    };
+
+    animate();
+
+    // Clean up on unmount
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      mountRef.current.removeChild(renderer.domElement);
+    };
+  }, [boxWidth, boxHeight]);
 
   return (
     <div
@@ -51,20 +79,9 @@ const GridLayout = ({
         position: "relative",
       }}
     >
-      {/* Canvas where the image and polygons are rendered */}
-      <canvas
-        ref={canvasRef}
-        width={boxWidth}
-        height={boxHeight}
-        style={{ display: "block" }}
-      />
-      
-      {/* Optional: Button to log or use rendered image data */}
-      <button onClick={() => console.log(getRenderedImageData())}>
-        Log Rendered Image Data
-      </button>
+      <div ref={mountRef} style={{ width: '100%', height: '100%' }} />
     </div>
   );
 };
 
-export default GridLayout;
+export default RenderCity;
