@@ -13,7 +13,7 @@ import {generateCityGraph} from "./components/graphGenerator"
 export default function App() {
 
 
-  const city_area = 5000;
+  const city_area = 2500;
   const { nodes, links } = generateCityGraph(city_area);
   /**
    * 1) State for the topographic map
@@ -45,7 +45,7 @@ export default function App() {
    */
   // Example: store dynamic node/link data
 
-const nodesOld = [
+const nodesO = [
   {
     id: "Residential",
     growthRate: 1.6,
@@ -99,7 +99,7 @@ const nodesOld = [
 
 
 
-const linksOld = [
+const linksO = [
   // Existing Links
   { source: "Residential", target: "Town Centre", weight: 5 },
   { source: "Residential", target: "Market", weight: 3 },
