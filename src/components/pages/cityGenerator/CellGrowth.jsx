@@ -311,6 +311,7 @@ function PolygonDrawer({
   const [currentShapeIndex, setCurrentShapeIndex] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
+  console.log("cityshapes" + JSON.stringify(cityShapes))
   // New state for user inputs
   const [selectedColor, setSelectedColor] = useState("#ff0000");
   const [selectedGrowthRate, setSelectedGrowthRate] =
@@ -561,6 +562,8 @@ function PolygonDrawer({
           const n = coords.length;
           const currentArea = calculateArea(coords);
           if (currentArea >= obj.maxShapeArea) {
+            console.log("max area " + obj.maxShapeArea)
+            console.log("currentArea" + obj.currentArea)
             return obj;
           }
 
