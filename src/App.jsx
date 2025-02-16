@@ -7,6 +7,7 @@ import RegionPlotter from "./components/pages/regionPlotter/RegionPlotter";
 import CellGrowthSimulator from "./components/pages/regionPlotter/CellGrowth";
 import { Grid } from "lucide-react";
 import GridLayout from "./components/pages/regionPlotter/GridLayout";
+import RenderCity from "./components/pages/renderCity/RenderCity"
 
 export default function App() {
   /**
@@ -142,19 +143,14 @@ const links = [
             1. Select Location
           </TabsTrigger>
           <TabsTrigger
-            value="RegionPlotter"
+            value="CityGrow"
             className="w-full text-center py-2"
           >
-            2. Position Regions
+            2. Grow City
           </TabsTrigger>
-          <TabsTrigger
-            value="CellGrowthSimulator"
-            className="w-full text-center py-2"
-          >
-            3. Simulate Growth
-          </TabsTrigger>
-          <TabsTrigger value="GridLayout" className="w-full text-center py-2">
-            4. Road
+
+          <TabsTrigger value="Render" className="w-full text-center py-2">
+            4. 3D Render
           </TabsTrigger>
         </TabsList>
 
@@ -184,7 +180,7 @@ const links = [
         </TabsContent>
 
         {/* TAB 2: Region Plotter */}
-        <TabsContent value="RegionPlotter" className="p-4  h-full w-full">
+        <TabsContent value="CityGrow" className="p-4  h-full w-full">
           <RegionPlotter
             // Example of passing the node/link data if you want them in parent state
             plotterNodes={plotterNodes}
@@ -218,8 +214,8 @@ const links = [
             setSimulatedShapes={setSimulatedShapes}
           />
         </TabsContent>
-        <TabsContent value="GridLayout" className="p-4">
-          <GridLayout />
+        <TabsContent value="Render" className="p-4">
+        <RenderCity />
         </TabsContent>
       </Tabs>
     </div>
