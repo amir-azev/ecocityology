@@ -467,7 +467,6 @@ function RoadLayouts({
           {drawGrid ? "Hide Roads" : "Generate Roads"}
         </Button>
 
-        <Button onClick={generateRoads}>Set Roads</Button>
         <Button onClick={generateBuildings}>Generate Buildings</Button>
 
         <div className="w-64">
