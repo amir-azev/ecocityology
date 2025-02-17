@@ -50,7 +50,7 @@ export default function App() {
   return (
     <div className="w-full h-screen p-6">
       {/* Title Section */}
-      <header className="bg-blue-600 text-white p-4 text-center">
+      <header className="bg-[#94d194] text-white p-4 text-center">
         <h1 className="text-3xl font-bold">Ecotopia - The City of the Future, Built by Robots</h1>
       </header>
 
