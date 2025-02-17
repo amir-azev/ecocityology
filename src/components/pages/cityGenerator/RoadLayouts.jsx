@@ -40,7 +40,9 @@ const getCombinedPathString = (outerPolygon, holes) => {
   const outerStr =
     "M " + outerPolygon.map((pt) => pt.join(",")).join(" ") + " z";
   const holesStr = holes
-    .map((hole) => "M " + hole.map((pt) => pt.join(",")).join(" ") + " z")
+    .map(
+      (hole) => "M " + hole.map((pt) => pt.join(",")).join(" ") + " z"
+    )
     .join(" ");
   return outerStr + " " + holesStr;
 };
@@ -141,7 +143,7 @@ const doPolygonsOverlap = (poly1, poly2) => {
   return true;
 };
 
-// Each shape component (which may eventually use buildings/roads data if needed)
+// Each shape component (2D polygons on the map)
 const Shape = React.memo(
   ({
     shape,
@@ -150,20 +152,20 @@ const Shape = React.memo(
     regionMatrixHeight,
     drawGrid,
     gridScale,
-    buildings,
-    setBuildings,
-    roads,
-    setRoads,
   }) => {
     const centroid = calculateCentroid(shape.outerPolygon);
     const area = Math.abs(calculateSignedArea(shape.outerPolygon));
-    const combinedPath = getCombinedPathString(shape.outerPolygon, shape.holes);
+    const combinedPath = getCombinedPathString(
+      shape.outerPolygon,
+      shape.holes
+    );
     const randomRotation = React.useMemo(() => Math.random() * 360, []);
     const patternSpacing = 10 * gridScale;
 
-    // Skip grid generation for obstacles or green spaces.
+    // We skip the standard grid if it's an obstacle or green space
     const skipGrid =
-      shape.id?.startsWith("obstacle") || shape.id?.startsWith("Green Spaces");
+      shape.id?.startsWith("obstacle") ||
+      shape.id?.startsWith("Green Spaces");
 
     return (
       <g>
@@ -238,81 +240,182 @@ function RoadLayouts({
   regionMatrixWidth,
   regionMatrixHeight,
   simulatedShapes,
-  buildings,    // from props
+  buildings, // from props
   setBuildings, // from props
-  roads,        // from props
-  setRoads,     // from props
+  roads, // from props
+  setRoads, // from props
 }) {
   const [drawGrid, setDrawGrid] = React.useState(false);
   const [gridScale, setGridScale] = React.useState(1);
+
+  // Colors for standard buildings
+  const colorOptions = [
+    "#D2B48C",
+    "#DEB887",
+    "#A89F91",
+    "#C0C0C0",
+    "#B0A999",
+    "#8C7B75",
+  ];
+
+  // --------------------------------------
+  // Constants for renewable-energy squares
+  // --------------------------------------
+  const SOLAR_SIDE = 10;       // square side (2D footprint) for solar
+  const WIND_SIDE = 10;        // square side (2D footprint) for wind
+  const SOLAR_HEIGHT_3D = 5;   // constant 3D height for solar
+  const WIND_HEIGHT_3D = 30;   // constant 3D height for wind
+  const RENEWABLE_MAX_COUNT = 20; // how many squares we attempt to place per shape
 
   // Generate buildings (footprints) and update the external state.
   const generateBuildings = () => {
     const newBuildings = [];
 
     simulatedShapes.forEach((shape, shapeIndex) => {
+      // Skip "obstacle" or "Green Spaces" from generating buildings
       const skipGrid =
-        shape.id?.startsWith("obstacle") || shape.id?.startsWith("Green Spaces");
+        shape.id?.startsWith("obstacle") ||
+        shape.id?.startsWith("Green Spaces");
       if (skipGrid) return;
 
-      const bbox = getBoundingBox(shape.outerPolygon);
-      let consecutiveFails = 0;
-      const maxFails = 20;
+      // If shape is "Renewable energy", pick if it's a solar region or wind region
+      if (shape.id?.startsWith("Renewable energy")) {
+        const isSolarRegion = Math.random() < 0.5; // 50/50 solar vs wind
+        const itemSide = isSolarRegion ? SOLAR_SIDE : WIND_SIDE;
+        const item3DHeight = isSolarRegion
+          ? SOLAR_HEIGHT_3D
+          : WIND_HEIGHT_3D;
+        // Hardcode fill color in 2D
+        const fillColor = isSolarRegion ? "black" : "white";
 
-      while (consecutiveFails < maxFails) {
-        const minArea = 1;
-        const maxArea = 80;
-        const areaCandidate = minArea + Math.random() * (maxArea - minArea);
-        const aspect = 0.5 + Math.random() * 1.5;
-        const width = Math.sqrt(areaCandidate * aspect);
-        const height = areaCandidate / width;
+        const bbox = getBoundingBox(shape.outerPolygon);
 
-        const cx = bbox.minX + Math.random() * (bbox.maxX - bbox.minX);
-        const cy = bbox.minY + Math.random() * (bbox.maxY - bbox.minY);
-        const x = cx - width / 2;
-        const y = cy - height / 2;
+        let consecutiveFails = 0;
+        const maxFails = 30; // We'll stop if we can't place any more
+        let countPlaced = 0;
 
-        const baseAngle = Math.random() < 0.5 ? 0 : 90;
-        const rotationOffset = -15 + Math.random() * 30;
-        const rotation = baseAngle + rotationOffset;
+        while (countPlaced < RENEWABLE_MAX_COUNT && consecutiveFails < maxFails) {
+          // Random center inside bounding box
+          const cx =
+            bbox.minX + Math.random() * (bbox.maxX - bbox.minX);
+          const cy =
+            bbox.minY + Math.random() * (bbox.maxY - bbox.minY);
 
-        const corners = getRotatedCorners(x, y, width, height, rotation);
-        const insidePolygon = corners.every((pt) =>
-          pointInPolygon(pt, shape.outerPolygon)
-        );
+          // Square is unrotated (rotation = 0)
+          const x = cx - itemSide / 2;
+          const y = cy - itemSide / 2;
 
-        if (!insidePolygon) {
-          consecutiveFails++;
-          continue;
+          // corners (no rotation)
+          const corners = getRotatedCorners(x, y, itemSide, itemSide, 0);
+
+          // Check if corners are inside the shape
+          const insidePolygon = corners.every((pt) =>
+            pointInPolygon(pt, shape.outerPolygon)
+          );
+          if (!insidePolygon) {
+            consecutiveFails++;
+            continue;
+          }
+
+          // Check overlap with already placed items in this shape
+          const overlaps = newBuildings.some((b) => {
+            if (b.shapeIndex !== shapeIndex) return false;
+            return doPolygonsOverlap(corners, b.corners);
+          });
+          if (overlaps) {
+            consecutiveFails++;
+            continue;
+          }
+
+          // Place it
+          newBuildings.push({
+            x,
+            y,
+            width: itemSide,
+            height: itemSide,
+            rotation: 0,
+            cx: x + itemSide / 2,
+            cy: y + itemSide / 2,
+            corners,
+            shapeIndex,
+            buildingHeight: item3DHeight,
+            id: `${shape.id}-renewable-${countPlaced}`,
+            color: fillColor, // direct color in 2D
+            isRenewable: true, // for identification if needed
+          });
+
+          countPlaced++;
+          consecutiveFails = 0; // reset fails on success
         }
+      } else {
+        // Normal shape => multiple random rectangular buildings
+        const bbox = getBoundingBox(shape.outerPolygon);
+        let consecutiveFails = 0;
+        const maxFails = 20;
 
-        const candidatePoly = corners;
-        const overlaps = newBuildings.some((b) => {
-          if (b.shapeIndex !== shapeIndex) return false;
-          return doPolygonsOverlap(candidatePoly, b.corners);
-        });
-        if (overlaps) {
-          consecutiveFails++;
-          continue;
+        while (consecutiveFails < maxFails) {
+          const minArea = 1;
+          const maxArea = 80;
+          const areaCandidate =
+            minArea + Math.random() * (maxArea - minArea);
+          const aspect = 0.5 + Math.random() * 1.5;
+          const width = Math.sqrt(areaCandidate * aspect);
+          const height = areaCandidate / width;
+
+          const cx = bbox.minX + Math.random() * (bbox.maxX - bbox.minX);
+          const cy = bbox.minY + Math.random() * (bbox.maxY - bbox.minY);
+
+          const x = cx - width / 2;
+          const y = cy - height / 2;
+
+          const baseAngle = Math.random() < 0.5 ? 0 : 90;
+          const rotationOffset = -15 + Math.random() * 30;
+          const rotation = baseAngle + rotationOffset;
+
+          const corners = getRotatedCorners(x, y, width, height, rotation);
+          const insidePolygon = corners.every((pt) =>
+            pointInPolygon(pt, shape.outerPolygon)
+          );
+          if (!insidePolygon) {
+            consecutiveFails++;
+            continue;
+          }
+
+          const candidatePoly = corners;
+          const overlaps = newBuildings.some((b) => {
+            if (b.shapeIndex !== shapeIndex) return false;
+            return doPolygonsOverlap(candidatePoly, b.corners);
+          });
+          if (overlaps) {
+            consecutiveFails++;
+            continue;
+          }
+
+          const buildingHeight = 10 + Math.random() * 40;
+          const randColor =
+            colorOptions[
+              Math.floor(Math.random() * colorOptions.length)
+            ];
+
+          newBuildings.push({
+            x,
+            y,
+            width,
+            height,
+            rotation,
+            cx: x + width / 2,
+            cy: y + height / 2,
+            corners,
+            shapeIndex,
+            buildingHeight,
+            id: `${shape.id || "shape" + shapeIndex}-building-${
+              newBuildings.length
+            }`,
+            color: randColor,
+          });
+
+          consecutiveFails = 0;
         }
-
-        const buildingHeight = 10 + Math.random() * 40;
-
-        newBuildings.push({
-          x,
-          y,
-          width,
-          height,
-          rotation,
-          cx: x + width / 2,
-          cy: y + height / 2,
-          corners,
-          shapeIndex,
-          buildingHeight,
-          id: `${shape.id || "shape" + shapeIndex}-building-${newBuildings.length}`,
-        });
-
-        consecutiveFails = 0;
       }
     });
 
@@ -320,8 +423,6 @@ function RoadLayouts({
   };
 
   // Generate roads as grids from simulated shapes.
-  // For each eligible shape, we compute horizontal and vertical grid lines (as arrays of segments
-  // in the format [[x1,y1],[x2,y2]]), based on the shape's bounding box and the grid scale.
   const generateRoads = () => {
     const newRoads = simulatedShapes
       .filter(
@@ -335,17 +436,15 @@ function RoadLayouts({
         const bbox = getBoundingBox(shape.outerPolygon);
         const lines = [];
 
-        // Generate horizontal lines.
+        // Horizontal lines
         for (let y = bbox.minY; y <= bbox.maxY; y += patternSpacing) {
-          // For a horizontal line, the endpoints span the bbox horizontally.
           const line = [
             [bbox.minX, y],
             [bbox.maxX, y],
           ];
           lines.push(line);
         }
-
-        // Generate vertical lines.
+        // Vertical lines
         for (let x = bbox.minX; x <= bbox.maxX; x += patternSpacing) {
           const line = [
             [x, bbox.minY],
@@ -405,6 +504,7 @@ function RoadLayouts({
             />
           )}
 
+          {/* Water features */}
           {regionWater &&
             regionWater.map((wf, idx) => (
               <path
@@ -416,6 +516,7 @@ function RoadLayouts({
               />
             ))}
 
+          {/* Main shapes */}
           {simulatedShapes &&
             simulatedShapes.map((shape, index) => (
               <Shape
@@ -426,10 +527,6 @@ function RoadLayouts({
                 regionMatrixHeight={regionMatrixHeight}
                 drawGrid={drawGrid}
                 gridScale={gridScale}
-                buildings={buildings}
-                setBuildings={setBuildings}
-                roads={roads}
-                setRoads={setRoads}
               />
             ))}
 
@@ -449,20 +546,22 @@ function RoadLayouts({
           )}
 
           {/* Render buildings from external state */}
-          {buildings?.map((building) => (
-            <rect
-              key={building.id}
-              x={building.x}
-              y={building.y}
-              width={building.width}
-              height={building.height}
-              fill="brown"
-              fillOpacity="0.8"
-              stroke="black"
-              strokeWidth="1"
-              transform={`rotate(${building.rotation}, ${building.cx}, ${building.cy})`}
-            />
-          ))}
+          {buildings?.map((building) => {
+            return (
+              <rect
+                key={building.id}
+                x={building.x}
+                y={building.y}
+                width={building.width}
+                height={building.height}
+                fill={building.color || "brown"}
+                fillOpacity="0.8"
+                stroke="black"
+                strokeWidth="1"
+                transform={`rotate(${building.rotation}, ${building.cx}, ${building.cy})`}
+              />
+            );
+          })}
         </svg>
       </SvgPanZoomWrapper>
     </div>

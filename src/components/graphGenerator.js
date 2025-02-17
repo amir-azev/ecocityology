@@ -61,7 +61,7 @@ export function generateCityGraph(city_area) {
         { "source": "Residential", "target": "Public Facilities", "weight": 3 },
         // { "source": "Residential", "target": "Transportation", "weight": 3 },
         { "source": "Residential", "target": "Agriculture", "weight": 1 },
-        { "source": "Residential", "target": "Industrial", "weight": 0 },
+        { "source": "Residential", "target": "Industrial", "weight": -2 },
         { "source": "Green Spaces", "target": "Commercial", "weight": 3 },
         { "source": "Green Spaces", "target": "Public Facilities", "weight": 4 },
         // { "source": "Commercial", "target": "Transportation", "weight": 5 },

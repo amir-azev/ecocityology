@@ -81,7 +81,7 @@ function createBuildingMesh3D(building, scaledZValues, regionWidth, regionHeight
     j: CUBOID_J,
     k: CUBOID_K,
     name: building.id || "Building",
-    color: meshColor,
+    color: building.color,
     opacity: 1.0,
     lighting: {
       ambient: 0.6,
