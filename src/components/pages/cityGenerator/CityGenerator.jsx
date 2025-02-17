@@ -15,6 +15,9 @@ function RegionPlotter({
   const groupRef = useRef(null);
   const simulationRef = useRef(null);
 
+
+    const city_area = 2500;
+
   const [isPaused, setIsPaused] = useState(false);
   const [selectedNode, setSelectedNode] = useState(null);
   const [scaleFactor, setScaleFactor] = useState(1.0);

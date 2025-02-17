@@ -31,6 +31,11 @@ function TopographicMap({
   const mapContainer = useRef(null);
   const map = useRef(null);
 
+
+
+
+
+
   // Initialize Mapbox only once
   useEffect(() => {
     if (map.current) return;
