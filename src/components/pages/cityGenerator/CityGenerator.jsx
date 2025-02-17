@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from "react";
 import * as d3 from "d3";
 import { Button } from "@/components/ui/button";
 import SvgPanZoomWrapper from "@/components/ui/SvgPanZoomWrapper";
+import { ArrowLeft, ArrowRight, ArrowUp, ArrowDown } from "lucide-react";
 
 function RegionPlotter({
   plotterNodes,
@@ -350,11 +351,19 @@ function RegionPlotter({
       </div>
 
       {/* Center controls */}
-      <div className="mb-4">
-        <Button onClick={() => setCenterX(centerX + 10)}>Move Center Right</Button>
-        <Button onClick={() => setCenterX(centerX - 10)}>Move Center Left</Button>
-        <Button onClick={() => setCenterY(centerY + 10)}>Move Center Down</Button>
-        <Button onClick={() => setCenterY(centerY - 10)}>Move Center Up</Button>
+      <div className="mb-4 flex items-center space-x-2">
+      <Button onClick={() => setCenterX(centerX - 10)}>
+        <ArrowLeft className="h-5 w-5" />
+      </Button>
+      <Button onClick={() => setCenterY(centerY - 10)}>
+        <ArrowUp className="h-5 w-5" />
+      </Button>
+      <Button onClick={() => setCenterY(centerY + 10)}>
+        <ArrowDown className="h-5 w-5" />
+      </Button>
+      <Button onClick={() => setCenterX(centerX + 10)}>
+        <ArrowRight className="h-5 w-5" />
+      </Button>
       </div>
 
       <div className="w-full h-full relative">
