@@ -37,7 +37,8 @@ const calculateCentroid = (points) => {
 
 // Helper: Convert multiple polygons (outer + holes) into one path string with "evenodd" fill
 const getCombinedPathString = (outerPolygon, holes) => {
-  const outerStr = "M " + outerPolygon.map((pt) => pt.join(",")).join(" ") + " z";
+  const outerStr =
+    "M " + outerPolygon.map((pt) => pt.join(",")).join(" ") + " z";
   const holesStr = holes
     .map((hole) => "M " + hole.map((pt) => pt.join(",")).join(" ") + " z")
     .join(" ");
@@ -140,7 +141,7 @@ const doPolygonsOverlap = (poly1, poly2) => {
   return true;
 };
 
-// Renders each shape; note that we pass along buildings and roads props if needed.
+// Each shape component (which may eventually use buildings/roads data if needed)
 const Shape = React.memo(
   ({
     shape,
@@ -156,11 +157,11 @@ const Shape = React.memo(
   }) => {
     const centroid = calculateCentroid(shape.outerPolygon);
     const area = Math.abs(calculateSignedArea(shape.outerPolygon));
-
     const combinedPath = getCombinedPathString(shape.outerPolygon, shape.holes);
     const randomRotation = React.useMemo(() => Math.random() * 360, []);
     const patternSpacing = 10 * gridScale;
 
+    // Skip grid generation for obstacles or green spaces.
     const skipGrid =
       shape.id?.startsWith("obstacle") || shape.id?.startsWith("Green Spaces");
 
@@ -186,7 +187,6 @@ const Shape = React.memo(
               <clipPath id={`clip-shape-${index}`}>
                 <path d={combinedPath} fillRule="evenodd" />
               </clipPath>
-
               <pattern
                 id={`grid-pattern-${index}`}
                 patternUnits="userSpaceOnUse"
@@ -238,55 +238,45 @@ function RoadLayouts({
   regionMatrixWidth,
   regionMatrixHeight,
   simulatedShapes,
-  buildings,
-  setBuildings,
-  roads,
-  setRoads,
+  buildings,    // from props
+  setBuildings, // from props
+  roads,        // from props
+  setRoads,     // from props
 }) {
   const [drawGrid, setDrawGrid] = React.useState(false);
   const [gridScale, setGridScale] = React.useState(1);
 
-  // Generate non-overlapping building footprints inside shapes with a grid.
+  // Generate buildings (footprints) and update the external state.
   const generateBuildings = () => {
     const newBuildings = [];
 
     simulatedShapes.forEach((shape, shapeIndex) => {
-      // Skip shapes not eligible for grid or building placement.
       const skipGrid =
         shape.id?.startsWith("obstacle") || shape.id?.startsWith("Green Spaces");
       if (skipGrid) return;
 
       const bbox = getBoundingBox(shape.outerPolygon);
-      // Continue trying until a set number of consecutive failed attempts.
       let consecutiveFails = 0;
       const maxFails = 20;
 
       while (consecutiveFails < maxFails) {
-        // Random area between 10 and 80 for the footprint
         const minArea = 10;
         const maxArea = 80;
         const areaCandidate = minArea + Math.random() * (maxArea - minArea);
-
-        // Random aspect ratio between 0.5 and 2
         const aspect = 0.5 + Math.random() * 1.5;
         const width = Math.sqrt(areaCandidate * aspect);
         const height = areaCandidate / width;
 
-        // Pick a random center within the bounding box
         const cx = bbox.minX + Math.random() * (bbox.maxX - bbox.minX);
         const cy = bbox.minY + Math.random() * (bbox.maxY - bbox.minY);
         const x = cx - width / 2;
         const y = cy - height / 2;
 
-        // Choose a base angle (0 or 90) then add a small random offset [-15,15] degrees.
         const baseAngle = Math.random() < 0.5 ? 0 : 90;
         const rotationOffset = -15 + Math.random() * 30;
         const rotation = baseAngle + rotationOffset;
 
-        // Compute rotated corners
         const corners = getRotatedCorners(x, y, width, height, rotation);
-
-        // Check if all four corners of the rectangle are inside the polygon
         const insidePolygon = corners.every((pt) =>
           pointInPolygon(pt, shape.outerPolygon)
         );
@@ -296,8 +286,6 @@ function RoadLayouts({
           continue;
         }
 
-        // Check overlap against buildings already placed in this shape.
-        // Use our SAT-based polygon overlap check.
         const candidatePoly = corners;
         const overlaps = newBuildings.some((b) => {
           if (b.shapeIndex !== shapeIndex) return false;
@@ -308,31 +296,68 @@ function RoadLayouts({
           continue;
         }
 
-        // Generate a random building height (vertical descriptor) within a desired range (10 to 50)
         const buildingHeight = 10 + Math.random() * 40;
 
-        // Building is valid, add it.
         newBuildings.push({
-          x, // top-left of the unrotated rectangle (for SVG rendering)
+          x,
           y,
           width,
-          height, // footprint height
+          height,
           rotation,
-          // center of the rectangle (for SVG transform)
           cx: x + width / 2,
           cy: y + height / 2,
-          // store its rotated corners for overlap checking
           corners,
           shapeIndex,
           buildingHeight,
           id: `${shape.id || "shape" + shapeIndex}-building-${newBuildings.length}`,
         });
-        // Reset failure counter on a successful placement.
+
         consecutiveFails = 0;
       }
     });
 
     setBuildings(newBuildings);
+  };
+
+  // Generate roads as grids from simulated shapes.
+  // For each eligible shape, we compute horizontal and vertical grid lines (as arrays of segments
+  // in the format [[x1,y1],[x2,y2]]), based on the shape's bounding box and the grid scale.
+  const generateRoads = () => {
+    const newRoads = simulatedShapes
+      .filter(
+        (shape) =>
+          shape.id &&
+          !shape.id.startsWith("obstacle") &&
+          !shape.id.startsWith("Green Spaces")
+      )
+      .map((shape) => {
+        const patternSpacing = 10 * gridScale;
+        const bbox = getBoundingBox(shape.outerPolygon);
+        const lines = [];
+
+        // Generate horizontal lines.
+        for (let y = bbox.minY; y <= bbox.maxY; y += patternSpacing) {
+          // For a horizontal line, the endpoints span the bbox horizontally.
+          const line = [
+            [bbox.minX, y],
+            [bbox.maxX, y],
+          ];
+          lines.push(line);
+        }
+
+        // Generate vertical lines.
+        for (let x = bbox.minX; x <= bbox.maxX; x += patternSpacing) {
+          const line = [
+            [x, bbox.minY],
+            [x, bbox.maxY],
+          ];
+          lines.push(line);
+        }
+
+        return { id: shape.id, lines, color: shape.color };
+      });
+
+    setRoads(newRoads);
   };
 
   return (
@@ -343,6 +368,7 @@ function RoadLayouts({
           {drawGrid ? "Hide Roads" : "Generate Roads"}
         </Button>
 
+        <Button onClick={generateRoads}>Set Roads</Button>
         <Button onClick={generateBuildings}>Generate Buildings</Button>
 
         <div className="w-64">
@@ -407,8 +433,23 @@ function RoadLayouts({
               />
             ))}
 
-          {/* Render generated buildings */}
-          {buildings.map((building) => (
+          {/* Render roads from external state as lines */}
+          {roads?.map((road) =>
+            road.lines.map((line, idx) => (
+              <line
+                key={`road-${road.id}-${idx}`}
+                x1={line[0][0]}
+                y1={line[0][1]}
+                x2={line[1][0]}
+                y2={line[1][1]}
+                stroke="gray"
+                strokeWidth="2"
+              />
+            ))
+          )}
+
+          {/* Render buildings from external state */}
+          {buildings?.map((building) => (
             <rect
               key={building.id}
               x={building.x}
