@@ -24,7 +24,7 @@ export default function App() {
    * 1) State for the topographic map
    */
   const [selectedLngLat, setSelectedLngLat] = useState(null);
-  const [radiusKm, setRadiusKm] = useState(1);
+  const [radiusKm, setRadiusKm] = useState(5);
   const [regionTiles, setRegionTiles] = useState([]);
   const [regionWater, setRegionWater] = useState([]);
   const [fullRegionImage, setFullRegionImage] = useState(null);
