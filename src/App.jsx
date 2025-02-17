@@ -149,7 +149,7 @@ const data = [
   const [cityShapes, setCityShapes] = useState([]); // Data structure for shapes in CellGrowth
 
   return (
-    <div className="w-full h-screen">
+    <div className="w-full h-screen p-6">
             {/* Title Section */}
       <header className="bg-blue-600 text-white p-4 text-center">
         <h1 className="text-3xl font-bold">Ecocityology - The City of the Future</h1>
