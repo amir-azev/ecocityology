@@ -81,7 +81,9 @@ export default function App() {
         {/* Show slider only in the "CityGrow" tab */}
         {activeTab === "CityGrow" && (
           <div className="flex items-center space-x-4 p-4 border-b">
-            <span className="text-lg font-medium">City Area: {cityArea*(1/500)} km²</span>
+              <span className="text-lg font-medium">
+                City Area: {(cityArea * (1 / 500)).toFixed(2)} km²
+              </span>
             <Slider
               value={[cityArea]}
               onValueChange={(value) => {
