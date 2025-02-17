@@ -500,14 +500,19 @@ function TopographicMap({
 
       {/* Radius input */}
       <div className="flex items-center space-x-2">
-        <label className="font-medium text-gray-600">Radius (km):</label>
-        <input
-          type="number"
-          value={radiusKm}
-          onChange={(e) => setRadiusKm(Number(e.target.value))}
-          className="w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none"
-        />
-      </div>
+  <label className="font-medium text-gray-600">Radius (km):</label>
+  <input
+    type="number"
+    value={radiusKm}
+    onChange={(e) => {
+      const value = Math.max(0, Number(e.target.value)); // Ensure the value is not negative
+      setRadiusKm(value);
+    }}
+    min="0" // Prevents typing negative values
+    className="w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none"
+  />
+</div>
+
 
       {/* Action button */}
       <div className="flex space-x-4">
