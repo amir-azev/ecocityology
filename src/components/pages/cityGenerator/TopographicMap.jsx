@@ -338,6 +338,7 @@ function TopographicMap({
       // Simple gradient from lightblue to darkblue
       const start = { r: 230, g: 230, b: 230 }; // lightblue
       const end = { r: 150, g: 150, b: 150 }; // darkblue
+      
       const r = Math.round(start.r + (end.r - start.r) * ratio);
       const g = Math.round(start.g + (end.g - start.g) * ratio);
       const b = Math.round(start.b + (end.b - start.b) * ratio);
@@ -474,7 +475,7 @@ function TopographicMap({
               <path
                 key={`water-${idx}`}
                 d={wf.d} // 'd' is in global coordinates
-                fill="#ff0000"
+                fill='rgb(64, 173, 216)'
                 fillOpacity={0.4}
                 stroke="none"
               />

@@ -260,7 +260,7 @@ function RegionPlotter({
     if (!plotterNodes) return;
 
     const newShapes = plotterNodes.map((node) => {
-      const { x, y, maxShapeArea, growthRate, id } = node;
+      const { x, y, maxShapeArea, growthRate, id, color } = node;
       const radius = Math.sqrt(node.startingShapeArea);
 
 
@@ -277,7 +277,8 @@ function RegionPlotter({
         isObstacle: false,
         maxShapeArea,
         growthRate,
-        id
+        id,
+        color
       };
     });
 
@@ -297,7 +298,7 @@ function RegionPlotter({
           <path
             key={`water-${idx}`}
             d={wf.d}
-            fill="#0000ff"
+            fill='rgb(64, 173, 216)'
             fillOpacity={0.4}
             stroke="none"
           />
