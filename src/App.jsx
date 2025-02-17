@@ -50,7 +50,7 @@ export default function App() {
   return (
     <div className="w-full h-screen p-6">
       {/* Title Section */}
-      <header className="bg-[#94d194] text-white p-4 text-center">
+      <header className="bg-[#94d194] text-white p-4 text-center rounded-md mb-5">
         <h1 className="text-3xl font-bold">Ecotopia - The City of the Future, Built by Robots</h1>
       </header>
 
@@ -81,7 +81,7 @@ export default function App() {
         {/* Show slider only in the "CityGrow" tab */}
         {activeTab === "CityGrow" && (
           <div className="flex items-center space-x-4 p-4 border-b">
-            <span className="text-lg font-medium">City Area: {cityArea} km²</span>
+            <span className="text-lg font-medium">City Area: {cityArea*(1/500)} km²</span>
             <Slider
               value={[cityArea]}
               onValueChange={(value) => {
