@@ -41,7 +41,8 @@ const CUBOID_K = [2, 3, 6, 7, 5, 4, 6, 5, 7, 6, 4, 7];
 // Create a cuboid (mesh3d) for a single building using dark, earthy tones
 function createBuildingMesh3D(building, scaledZValues, regionWidth, regionHeight) {
   // Dark, earthy color palette
-  const colorOptions = ["#4E342E", "#5D4037", "#3E2723", "#424242", "#2E2E2E", "#556B2F"];
+  const colorOptions = ["#D2B48C", "#DEB887", "#A89F91", "#C0C0C0", "#B0A999", "#8C7B75"];
+
   const meshColor = colorOptions[Math.floor(Math.random() * colorOptions.length)];
 
   const corners2D = building.corners;

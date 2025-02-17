@@ -260,7 +260,7 @@ function RoadLayouts({
       const maxFails = 20;
 
       while (consecutiveFails < maxFails) {
-        const minArea = 10;
+        const minArea = 1;
         const maxArea = 80;
         const areaCandidate = minArea + Math.random() * (maxArea - minArea);
         const aspect = 0.5 + Math.random() * 1.5;
