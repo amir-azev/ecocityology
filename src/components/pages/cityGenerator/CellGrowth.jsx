@@ -18,7 +18,7 @@ const DIVISION_FACTOR = 0.15;
 const OBSTACLE_CRITICAL_AREA = 20;
 const DEFAULT_MAX_SHAPE_AREA = 8000; // Define a sensible default
 
-const MAX_SHAPE_SCALE = 10
+const MAX_SHAPE_SCALE = 10;
 
 // Helper functions for geometry
 const calculateSignedArea = (points) => {
@@ -133,11 +133,13 @@ const Shape = React.memo(({ shape, index }) => {
     [shape.outerPolygon]
   );
 
+  console.log("shapecol  "+shape.color)
   return (
     <g>
       <polygon
         points={getPathString(shape.outerPolygon)}
-        fill={shape.isObstacle ? "blue" : shape.color || "red"}
+        // Updated to always use shape.color:
+        fill={shape.color}
         fillOpacity={shape.isObstacle ? 0.5 : 0.3}
         stroke="black"
         strokeWidth="2"
@@ -306,14 +308,14 @@ function PolygonDrawer({
   regionMatrixWidth,
   regionMatrixHeight,
   cityShapes, // New prop
+  simulatedShapes, setSimulatedShapes
 }) {
-  const [objects, setObjects] = useState([]); // shapes and obstacles
+  // const [simulatedShapes, setSimulatedShapes] = useState([]); // shapes and obstacles
   const [currentPoints, setCurrentPoints] = useState([]);
   const [drawingType, setDrawingType] = useState(null); // 'shape', 'hole', 'obstacle'
   const [currentShapeIndex, setCurrentShapeIndex] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  // console.log("cityshapes" + JSON.stringify(cityShapes))
   // New state for user inputs
   const [selectedColor, setSelectedColor] = useState("#ff0000");
   const [selectedGrowthRate, setSelectedGrowthRate] =
@@ -331,10 +333,10 @@ function PolygonDrawer({
     });
   }, []);
 
-  // Initialize objects with cityShapes when cityShapes prop changes
+  // Initialize simulatedShapes with cityShapes when cityShapes prop changes
   useEffect(() => {
     if (cityShapes && cityShapes.length > 0) {
-      setObjects((prevObjects) => {
+      setSimulatedShapes((prevObjects) => {
         const existingIds = new Set(prevObjects.map((obj) => obj.id));
         const newCityShapes = cityShapes.filter(
           (shape) => !existingIds.has(shape.id)
@@ -348,7 +350,7 @@ function PolygonDrawer({
   useEffect(() => {
     if (!regionWater || regionWater.length === 0) return;
 
-    setObjects((prev) => {
+    setSimulatedShapes((prev) => {
       const newObstacles = regionWater.flatMap((wf) => {
         const polygons = parseMultiPolygonPath(wf.d);
         return polygons.map((points) => {
@@ -359,7 +361,7 @@ function PolygonDrawer({
             outerPolygon: oriented,
             holes: [],
             isObstacle: true,
-            color: "blue",
+            color: 'rgb(64, 173, 216)', // default obstacle color
             growthRate: undefined,
             maxShapeArea: undefined,
           };
@@ -399,7 +401,7 @@ function PolygonDrawer({
                   outerPolygon: resampleShape(outer, DIVISION_FACTOR),
                   holes: [],
                   isObstacle: true,
-                  color: "blue",
+                  color: 'rgb(64, 173, 216)',
                   growthRate: undefined,
                   maxShapeArea: undefined,
                 },
@@ -416,7 +418,7 @@ function PolygonDrawer({
                     outerPolygon: resampleShape(outer, DIVISION_FACTOR),
                     holes: [],
                     isObstacle: true,
-                    color: "blue",
+                    color: 'rgb(64, 173, 216)',
                     growthRate: undefined,
                     maxShapeArea: undefined,
                   };
@@ -437,7 +439,7 @@ function PolygonDrawer({
     if (!jstsRef.current) return null;
     const { reader } = jstsRef.current;
     let unionGeom = null;
-    objects.forEach((obj) => {
+    simulatedShapes.forEach((obj) => {
       if (obj.isObstacle) {
         const geoJSON = {
           type: "Polygon",
@@ -451,14 +453,14 @@ function PolygonDrawer({
       }
     });
     return unionGeom ? unionGeom.buffer(0) : null;
-  }, [objects]);
+  }, [simulatedShapes]);
 
   // Precompute union of all non-obstacle shapes
   const allShapesUnion = useMemo(() => {
     if (!jstsRef.current) return null;
     const { reader } = jstsRef.current;
     let unionGeom = null;
-    objects.forEach((obj) => {
+    simulatedShapes.forEach((obj) => {
       if (!obj.isObstacle) {
         const geoJSON = {
           type: "Polygon",
@@ -472,7 +474,7 @@ function PolygonDrawer({
       }
     });
     return unionGeom ? unionGeom.buffer(0) : null;
-  }, [objects]);
+  }, [simulatedShapes]);
 
   // Precompute gradient vector field
   const vectorFieldDataRef = useRef([]);
@@ -540,7 +542,7 @@ function PolygonDrawer({
     const vectorFieldData = vectorFieldDataRef.current;
     const k = 0.9; // Tuning factor
 
-    const newObjects = objects
+    const newObjects = simulatedShapes
       .map((obj) => {
         if (obj.isObstacle) {
           return obj;
@@ -563,9 +565,7 @@ function PolygonDrawer({
           const coords = obj.outerPolygon;
           const n = coords.length;
           const currentArea = calculateArea(coords);
-          if (currentArea >= (obj.maxShapeArea*MAX_SHAPE_SCALE)) {
-            console.log("max area " + (obj.maxShapeArea*100))
-            console.log("currentArea " + currentArea)
+          if (currentArea >= obj.maxShapeArea * MAX_SHAPE_SCALE) {
             return obj;
           }
 
@@ -604,21 +604,30 @@ function PolygonDrawer({
           let newGeom = reader.read(newGeoJSON).buffer(0);
           newGeom = newGeom.buffer(0);
           if (newGeom.isEmpty() || !newGeom.isValid()) {
-            console.warn("Invalid geometry after growth, skipping:", obj);
+            console.warn(
+              "Invalid geometry after growth, skipping:",
+              obj
+            );
             return null;
           }
 
           newGeom = newGeom.intersection(boundingBoxGeom);
           newGeom = newGeom.buffer(0);
           if (newGeom.isEmpty() || !newGeom.isValid()) {
-            console.warn("Geometry empty or invalid after clipping, skipping:", obj);
+            console.warn(
+              "Geometry empty or invalid after clipping, skipping:",
+              obj
+            );
             return null;
           }
 
           if (obstaclesUnion) {
             newGeom = newGeom.difference(obstaclesUnion).buffer(0);
             if (newGeom.isEmpty() || !newGeom.isValid()) {
-              console.warn("Geometry empty or invalid after subtracting obstacles, skipping:", obj);
+              console.warn(
+                "Geometry empty or invalid after subtracting obstacles, skipping:",
+                obj
+              );
               return null;
             }
           }
@@ -628,7 +637,10 @@ function PolygonDrawer({
               .difference(allShapesUnion.difference(geometry))
               .buffer(0);
             if (newGeom.isEmpty() || !newGeom.isValid()) {
-              console.warn("Geometry empty or invalid after subtracting other shapes, skipping:", obj);
+              console.warn(
+                "Geometry empty or invalid after subtracting other shapes, skipping:",
+                obj
+              );
               return null;
             }
           }
@@ -644,7 +656,10 @@ function PolygonDrawer({
             newHolesList = newHolesList.filter(
               (hole) => calculateArea(hole) > CRITICAL_AREA
             );
-            const resampledOuter = resampleShape(newOuterPolygon, DIVISION_FACTOR);
+            const resampledOuter = resampleShape(
+              newOuterPolygon,
+              DIVISION_FACTOR
+            );
             const resampledHoles = newHolesList.map((hole) =>
               resampleShape(hole, DIVISION_FACTOR)
             );
@@ -675,7 +690,10 @@ function PolygonDrawer({
               newHolesList = newHolesList.filter(
                 (hole) => calculateArea(hole) > CRITICAL_AREA
               );
-              const resampledOuter = resampleShape(newOuterPolygon, DIVISION_FACTOR);
+              const resampledOuter = resampleShape(
+                newOuterPolygon,
+                DIVISION_FACTOR
+              );
               const resampledHoles = newHolesList.map((hole) =>
                 resampleShape(hole, DIVISION_FACTOR)
               );
@@ -709,12 +727,12 @@ function PolygonDrawer({
       })
       .filter((obj) => obj !== null);
 
-    setObjects(newObjects);
+    setSimulatedShapes(newObjects);
   }, [
     jstsRef,
     regionMatrixWidth,
     regionMatrixHeight,
-    objects,
+    simulatedShapes,
     obstaclesUnion,
     allShapesUnion,
   ]);
@@ -738,13 +756,13 @@ function PolygonDrawer({
   }, [isPlaying, performGrowthIteration]);
 
   const togglePlayPause = useCallback(() => {
-    const shapes = objects.filter((o) => !o.isObstacle);
+    const shapes = simulatedShapes.filter((o) => !o.isObstacle);
     if (!isPlaying && shapes.length === 0) {
       alert("Please draw at least one shape before playing.");
       return;
     }
     setIsPlaying((prev) => !prev);
-  }, [objects, isPlaying]);
+  }, [simulatedShapes, isPlaying]);
 
   // SVG click handler for drawing
   const handleSvgClick = useCallback(
@@ -787,7 +805,7 @@ function PolygonDrawer({
         outerPolygon: resampledPoints,
         holes: [],
         isObstacle: drawingType === "obstacle",
-        color: drawingType === "shape" ? selectedColor : undefined,
+        color: drawingType === "shape" ? selectedColor : 'rgb(64, 173, 216)',
         growthRate:
           drawingType === "shape"
             ? parseFloat(selectedGrowthRate) || GROWTH_RATE_DEFAULT
@@ -798,10 +816,10 @@ function PolygonDrawer({
             : undefined,
       };
 
-      setObjects((prevObjects) => [...prevObjects, newShape]);
+      setSimulatedShapes((prevObjects) => [...prevObjects, newShape]);
     } else if (drawingType === "hole" && currentShapeIndex !== null) {
       resampledPoints = ensurePolygonOrientation(resampledPoints, false);
-      setObjects((prevObjects) => {
+      setSimulatedShapes((prevObjects) => {
         return prevObjects.map((shape, idx) => {
           if (idx === currentShapeIndex) {
             return {
@@ -830,7 +848,7 @@ function PolygonDrawer({
     const elevationArray = regionElevationArray
       ? Array.from(regionElevationArray)
       : [];
-    const updatedCityShapes = objects.filter((obj) => !obj.isObstacle);
+    const updatedCityShapes = simulatedShapes.filter((obj) => !obj.isObstacle);
     const dataToExport = {
       regionWater,
       fullRegionImage,
@@ -854,7 +872,7 @@ function PolygonDrawer({
     regionElevationArray,
     regionMatrixWidth,
     regionMatrixHeight,
-    objects,
+    simulatedShapes,
   ]);
 
   /**
@@ -876,7 +894,7 @@ function PolygonDrawer({
           <path
             key={`water-${idx}`}
             d={wf.d}
-            fill="#0000ff"
+            fill='rgb(64, 173, 216)'
             fillOpacity={0.4}
             stroke="none"
           />
@@ -884,6 +902,8 @@ function PolygonDrawer({
       </g>
     );
   };
+
+  console.log("simshapes " + JSON.stringify(simulatedShapes))
 
   return (
     <div>
@@ -894,7 +914,7 @@ function PolygonDrawer({
           style={{ border: "1px solid black", background: "white" }}
         >
           {renderTerrainBackground()}
-          {objects.map((shape, index) => (
+          {simulatedShapes.map((shape, index) => (
             <Shape key={`shape-${index}`} shape={shape} index={index} />
           ))}
           {currentPoints.length > 0 && (
@@ -914,7 +934,7 @@ function PolygonDrawer({
                     ? "red"
                     : drawingType === "obstacle"
                     ? "gray"
-                    : "blue"
+                    : 'rgb(64, 173, 216)'
                 }
                 strokeWidth="2"
                 strokeDasharray="4"
@@ -1005,25 +1025,6 @@ function PolygonDrawer({
                 style={{ marginLeft: "5px", width: "80px" }}
               />
             </label>
-          </div>
-        )}
-
-        {objects.length > 0 && (
-          <div style={{ marginTop: "10px" }}>
-            <p>Select a shape to add holes:</p>
-            {objects.map((shape, index) => {
-              if (shape.isObstacle) return null;
-              return (
-                <Button
-                  key={index}
-                  onClick={() => handleStartDrawingHole(index)}
-                  disabled={drawingType !== null || isPlaying}
-                  style={{ marginRight: "5px", marginBottom: "5px" }}
-                >
-                  Add Hole to Shape {index + 1} [{shape.holes.length}]
-                </Button>
-              );
-            })}
           </div>
         )}
       </div>

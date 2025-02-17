@@ -90,6 +90,8 @@ export function generateCityGraph(city_area) {
         });
     });
 
+    console.log("nodes  " +nodes)
+
     return { nodes, links: expandedLinks };
 }
 

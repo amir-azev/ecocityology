@@ -9,6 +9,7 @@ import { Grid } from "lucide-react";
 import GridLayout from "./components/pages/cityGenerator/GridLayout";
 import RenderCity from "./components/pages/renderCity/RenderCity"
 import {generateCityGraph} from "./components/graphGenerator"
+import RoadLayouts from "./components/pages/cityGenerator/RoadLayouts";
 
 export default function App() {
 
@@ -158,18 +159,25 @@ const data = [
             value="CityGrow"
             className="w-full text-center py-2"
           >
-            2. Grow City
+            2. Set Regions
           </TabsTrigger>
 
           <TabsTrigger
             value="CellGrowthSimulator"
             className="w-full text-center py-2"
           >
-            3. Cell Grow
+            3. Regions Grow
+          </TabsTrigger>
+
+          <TabsTrigger
+            value="RoadLayouts"
+            className="w-full text-center py-2"
+          >
+            4. Layout Roads
           </TabsTrigger>
 
           <TabsTrigger value="Render" className="w-full text-center py-2">
-            4. 3D Render
+            5. 3D Render
           </TabsTrigger>
         </TabsList>
 
@@ -230,7 +238,21 @@ const data = [
             regionMatrixWidth={regionMatrixWidth}
             regionMatrixHeight={regionMatrixHeight}
             regionWaterPaths={regionWaterPaths}
-            // simulatedShapes = {simulatedShapes}
+            simulatedShapes = {simulatedShapes}
+            setSimulatedShapes={setSimulatedShapes}
+          />
+        </TabsContent>
+        <TabsContent value="RoadLayouts" className="p-4">
+          <RoadLayouts
+            cityShapes={cityShapes}
+            setCityShapes={setCityShapes}
+            regionWater={regionWater}
+            fullRegionImage={fullRegionImage}
+            regionElevationArray={regionElevationArray}
+            regionMatrixWidth={regionMatrixWidth}
+            regionMatrixHeight={regionMatrixHeight}
+            regionWaterPaths={regionWaterPaths}
+            simulatedShapes = {simulatedShapes}
             setSimulatedShapes={setSimulatedShapes}
           />
         </TabsContent>
@@ -240,9 +262,10 @@ const data = [
             regionMatrixWidth={regionMatrixWidth}
             regionMatrixHeight={regionMatrixHeight}
             elevationScale={0.05} 
-
+            regionWater={regionWater}
             data={data}
             elevationMatrix={data}
+            simulatedShapes={simulatedShapes}
             />
         </TabsContent>
       </Tabs>

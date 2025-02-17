@@ -1,40 +1,133 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Plot from 'react-plotly.js';
 
-const RenderCity = ({ regionElevationArray, regionMatrixWidth, regionMatrixHeight }) => {
-  // Convert the 1D regionElevationArray into a 2D array (matrix)
+function buildPath2DFromSvgString(d) {
+  return new Path2D(d);
+}
+
+function rasterizeWaterMask(regionWater, width, height) {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#fff';
+  regionWater.forEach((wf) => {
+    const path2d = buildPath2DFromSvgString(wf.d);
+    ctx.fill(path2d);
+  });
+
+  const imageData = ctx.getImageData(0, 0, width, height).data;
+  const waterMask = new Uint8Array(width * height);
+
+  for (let i = 0; i < waterMask.length; i++) {
+    if (imageData[i * 4 + 3] > 0) {
+      waterMask[i] = 1;
+    }
+  }
+  return waterMask;
+}
+
+const RenderCity = ({
+  regionElevationArray,
+  regionMatrixWidth,
+  regionMatrixHeight,
+  regionWater,
+  simulatedShapes = []
+}) => {
+  const [elevationScale, setElevationScale] = useState(1);
+  const [waterMask, setWaterMask] = useState(null);
+
   const zValues = [];
   for (let row = 0; row < regionMatrixHeight; row++) {
-    const startIndex = row * regionMatrixWidth;
-    const endIndex = startIndex + regionMatrixWidth;
-    zValues.push(regionElevationArray.slice(startIndex, endIndex));
+    const start = row * regionMatrixWidth;
+    const end = start + regionMatrixWidth;
+    zValues.push(regionElevationArray.slice(start, end));
   }
 
-  // Generate x and y axis arrays
-  const xValues = Array.from({ length: regionMatrixWidth }, (_, i) => i);
-  const yValues = Array.from({ length: regionMatrixHeight }, (_, i) => i);
+  useEffect(() => {
+    if (!regionWater || regionWater.length === 0) {
+      setWaterMask(null);
+      return;
+    }
+    const mask = rasterizeWaterMask(regionWater, regionMatrixWidth, regionMatrixHeight);
+    setWaterMask(mask);
+  }, [regionWater, regionMatrixWidth, regionMatrixHeight]);
 
-  // State to hold the elevation scale factor
-  const [elevationScale, setElevationScale] = useState(1);
+  const maxOriginalVal = Math.max(...regionElevationArray);
+  const minOriginalVal = Math.min(...regionElevationArray);
+  const maxScaledVal = maxOriginalVal * elevationScale;
 
-  // Scale the elevation values by elevationScale
-  const scaledZValues = zValues.map(row => row.map(val => val * elevationScale));
+  const scaledZValues = zValues.map((row) =>
+    row.map((val) => val * elevationScale)
+  );
 
-  // Find the max elevation in the data (after scaling)
-  const maxScaledVal = Math.max(...regionElevationArray) * elevationScale;
+  const specialWaterValue = minOriginalVal - 1;
+  const colorValue2D = [];
+  for (let row = 0; row < regionMatrixHeight; row++) {
+    const rowArr = [];
+    for (let col = 0; col < regionMatrixWidth; col++) {
+      const idx = row * regionMatrixWidth + col;
+      rowArr.push(waterMask && waterMask[idx] === 1 ? specialWaterValue : scaledZValues[row][col]);
+    }
+    colorValue2D.push(rowArr);
+  }
 
-  // We'll leave a bit of extra space at the top so it doesn't fill the entire vertical range
-  const zAxisMax = maxScaledVal * 1.2; // 20% buffer above the highest point
+  const fractionMinVal = (minOriginalVal * elevationScale - specialWaterValue) / (maxScaledVal - specialWaterValue);
+  const customColorScale = [
+    [0, 'rgb(64, 173, 216)'],
+    [fractionMinVal, 'rgb(64, 173, 216)'],
+    [fractionMinVal + 0.0001, 'rgb(200,255,200)'],
+    [1, 'rgb(34,139,34)'],
+  ];
+
+  const shapeLineTraces = simulatedShapes
+    .filter(shape => !(shape.id && shape.id.startsWith('obstacle-')))
+    .map((shape, shapeIndex) => {
+      const xCoords = [];
+      const yCoords = [];
+      const zCoords = [];
+      const polygon = shape.outerPolygon;
+      if (!polygon || polygon.length < 2) {
+        return null;
+      }
+
+      for (let i = 0; i < polygon.length; i++) {
+        const [x, y] = polygon[i];
+        const xClamped = Math.min(Math.max(0, Math.floor(x)), regionMatrixWidth - 1);
+        const yClamped = Math.min(Math.max(0, Math.floor(y)), regionMatrixHeight - 1);
+
+        xCoords.push(xClamped);
+        yCoords.push(yClamped);
+        zCoords.push(scaledZValues[yClamped][xClamped] + 2); 
+      }
+
+      xCoords.push(xCoords[0]);
+      yCoords.push(yCoords[0]);
+      zCoords.push(zCoords[0]);
+
+      return {
+        type: 'scatter3d',
+        mode: 'lines',
+        x: xCoords,
+        y: yCoords,
+        z: zCoords,
+        name: shape.id || `Shape ${shapeIndex}`,
+        line: {
+          color: 'grey',
+          width: 6
+        },
+        showlegend: false // Hide legend for this trace
+      };
+    }).filter(Boolean);
 
   return (
-    <div style={{ width: '100%', height: '100%' }}>
-      {/* Slider to control elevation scale */}
+    <div>
       <div style={{ marginBottom: '20px' }}>
-        <label htmlFor="elevationSlider" style={{ marginRight: '10px' }}>
-          Elevation Scale: {elevationScale}
+        <label style={{ marginRight: '10px' }}>
+          Elevation Scale: {elevationScale.toFixed(1)}
         </label>
         <input
-          id="elevationSlider"
           type="range"
           min="0.1"
           max="5"
@@ -48,29 +141,31 @@ const RenderCity = ({ regionElevationArray, regionMatrixWidth, regionMatrixHeigh
       <Plot
         data={[
           {
-            x: xValues,
-            y: yValues,
             z: scaledZValues,
             type: 'surface',
-            // Use 'Greens' for a green color scheme
-            colorscale: 'Greens',
+            surfacecolor: colorValue2D,
+            cmin: specialWaterValue,
+            cmax: maxScaledVal,
+            colorscale: customColorScale,
+            showscale: false // Hide color scale (legend)
           },
+          ...shapeLineTraces
         ]}
         layout={{
-          title: 'City Elevation Surface',
+          title: 'City Elevation Surface (with Water + Shapes)',
           autosize: true,
           scene: {
-            // Use aspectratio to flatten the terrain so it doesn’t look too spiky
             aspectmode: 'manual',
             aspectratio: { x: 1, y: 1, z: 0.3 },
             xaxis: { title: 'X Axis' },
             yaxis: { title: 'Y Axis' },
             zaxis: {
               title: 'Elevation',
-              range: [0, zAxisMax], // sets a vertical limit based on data
+              range: [0, maxScaledVal * 1.2],
             },
           },
-          margin: { l: 0, r: 0, t: 30, b: 0 }, // Adjust margins as needed
+          margin: { l: 0, r: 0, t: 30, b: 0 },
+          showlegend: false // Hide legend globally
         }}
         style={{ width: '100%', height: '600px' }}
         config={{ responsive: true }}
