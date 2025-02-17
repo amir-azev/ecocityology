@@ -38,6 +38,9 @@ export default function App() {
   const [regionWaterPaths, setRegionWaterPaths] = useState(null);
   const [simulatedShapes, setSimulatedShapes] = useState([]);
 
+  const [buildings,setBuildings] = useState([])
+  const [roads,setRoads] = useState([])
+
   /**
    * 2) State for region plotter (force graph)
    * If your RegionPlotter uses a static set of nodes and links, you can
@@ -254,6 +257,10 @@ const data = [
             regionWaterPaths={regionWaterPaths}
             simulatedShapes = {simulatedShapes}
             setSimulatedShapes={setSimulatedShapes}
+            buildings={buildings}
+            setBuildings={setBuildings}
+            roads={roads}
+            setRoads={setRoads}
           />
         </TabsContent>
         <TabsContent value="Render" className="p-4">
@@ -266,6 +273,8 @@ const data = [
             data={data}
             elevationMatrix={data}
             simulatedShapes={simulatedShapes}
+            buildings={buildings}
+            roads={roads}
             />
         </TabsContent>
       </Tabs>

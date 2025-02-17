@@ -33,7 +33,9 @@ const RenderCity = ({
   regionMatrixWidth,
   regionMatrixHeight,
   regionWater,
-  simulatedShapes = []
+  simulatedShapes = [],
+  buildings,
+  roads
 }) => {
   const [elevationScale, setElevationScale] = useState(1);
   const [waterMask, setWaterMask] = useState(null);
@@ -139,37 +141,53 @@ const RenderCity = ({
       </div>
 
       <Plot
-        data={[
-          {
-            z: scaledZValues,
-            type: 'surface',
-            surfacecolor: colorValue2D,
-            cmin: specialWaterValue,
-            cmax: maxScaledVal,
-            colorscale: customColorScale,
-            showscale: false // Hide color scale (legend)
-          },
-          ...shapeLineTraces
-        ]}
-        layout={{
-          title: 'City Elevation Surface (with Water + Shapes)',
-          autosize: true,
-          scene: {
-            aspectmode: 'manual',
-            aspectratio: { x: 1, y: 1, z: 0.3 },
-            xaxis: { title: 'X Axis' },
-            yaxis: { title: 'Y Axis' },
-            zaxis: {
-              title: 'Elevation',
-              range: [0, maxScaledVal * 1.2],
-            },
-          },
-          margin: { l: 0, r: 0, t: 30, b: 0 },
-          showlegend: false // Hide legend globally
-        }}
-        style={{ width: '100%', height: '600px' }}
-        config={{ responsive: true }}
-      />
+  data={[
+    {
+      z: scaledZValues,
+      type: 'surface',
+      surfacecolor: colorValue2D,
+      cmin: specialWaterValue,
+      cmax: maxScaledVal,
+      colorscale: customColorScale,
+      showscale: false // Hide color scale (legend)
+    },
+    ...shapeLineTraces
+  ]}
+  layout={{
+    title: 'City Elevation Surface (with Water + Shapes)',
+    autosize: true,
+    paper_bgcolor: '#E0F7FF',
+    plot_bgcolor: '#E0F7FF',
+    scene: {
+      bgcolor: '#E0F7FF',
+      aspectmode: 'manual',
+      aspectratio: { x: 1, y: 1, z: 0.3 },
+      xaxis: {
+        title: '',
+        showticklabels: false,
+        showgrid: false,
+        zeroline: false,
+      },
+      yaxis: {
+        title: '',
+        showticklabels: false,
+        showgrid: false,
+        zeroline: false,
+      },
+      zaxis: {
+        title: '',
+        showticklabels: false,
+        showgrid: false,
+        zeroline: false,
+        range: [0, maxScaledVal * 1.2],
+      },
+    },
+    margin: { l: 0, r: 0, t: 30, b: 0 },
+    showlegend: false // Hide legend globally
+  }}
+  style={{ width: '100%', height: '600px' }}
+  config={{ responsive: true }}
+/>
     </div>
   );
 };
