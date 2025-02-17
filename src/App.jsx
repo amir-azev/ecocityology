@@ -150,6 +150,11 @@ const data = [
 
   return (
     <div className="w-full h-screen">
+            {/* Title Section */}
+      <header className="bg-blue-600 text-white p-4 text-center">
+        <h1 className="text-3xl font-bold">Ecocityology - The City of the Future</h1>
+      </header>
+      
       <Tabs defaultValue="TopographicMap" className="w-full h-full">
         <TabsList className="w-full flex justify-around border-b">
           <TabsTrigger
